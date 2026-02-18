@@ -378,8 +378,8 @@ footer { padding: var(--space-xl) 0; border-top: 1px solid var(--border); font-s
         <div class="section-label">H&auml;ufigkeitsanalyse</div>
         <div class="heatmap-wrap">
             <div class="view-toggle" id="heatmapToggle">
-                <button class="active" data-view="historical">Historische Daten</button>
-                <button data-view="simulation" id="btnSimView" disabled>Simulationsergebnis</button>
+                <button type="button" class="active" data-view="historical">Historische Daten</button>
+                <button type="button" data-view="simulation" id="btnSimView" disabled>Simulationsergebnis</button>
             </div>
             <div class="heatmap-grid" id="heatmap"></div>
             <div class="heatmap-legend">
@@ -400,7 +400,7 @@ footer { padding: var(--space-xl) 0; border-top: 1px solid var(--border); font-s
                     <span class="slider-value" id="iterValue">100.000</span>
                 </div>
             </div>
-            <button class="btn btn-primary" id="btnRun">Simulation starten</button>
+            <button type="button" class="btn btn-primary" id="btnRun">Simulation starten</button>
         </div>
         <div class="progress-wrap" id="progressWrap">
             <div class="progress-header">
@@ -487,6 +487,7 @@ footer { padding: var(--space-xl) 0; border-top: 1px solid var(--border); font-s
     var currentView = 'historical';
     var simResults = null;
     var simZzResults = null;
+    var lastSimIterations = 0;
 
     function renderStats() {
         var firstDate = historicalData[0].date;
@@ -537,10 +538,10 @@ footer { padding: var(--space-xl) 0; border-top: 1px solid var(--border); font-s
     function heatColor(t) {
         if (t <= 0.5) {
             var s = t / 0.5;
-            return 'rgba(74, 160, 255, ' + (0.5 - s * 0.45).toFixed(2) + ')';
+            return 'rgba(74, 160, 255, ' + (0.5 - s * 0.4).toFixed(2) + ')';
         } else {
             var s2 = (t - 0.5) / 0.5;
-            return 'rgba(220, 88, 67, ' + (s2 * 0.55).toFixed(2) + ')';
+            return 'rgba(220, 88, 67, ' + (0.1 + s2 * 0.45).toFixed(2) + ')';
         }
     }
 
@@ -550,7 +551,7 @@ footer { padding: var(--space-xl) 0; border-top: 1px solid var(--border); font-s
         var num = e.currentTarget.dataset.num;
         var freq = parseInt(e.currentTarget.dataset.freq);
         var source = currentView === 'simulation' ? 'Simulation' : 'Historisch';
-        var total = historicalData.length;
+        var total = currentView === 'simulation' ? lastSimIterations : historicalData.length;
         var pct = ((freq / total) * 100).toFixed(2);
         tooltip.innerHTML = '<strong>Zahl ' + num + '</strong> \u00b7 ' + freq.toLocaleString('de-AT') + '\u00d7 gezogen \u00b7 ' + pct + ' % <span style="color:var(--text-muted)">(' + source + ')</span>';
         tooltip.classList.add('show');
@@ -574,32 +575,39 @@ footer { padding: var(--space-xl) 0; border-top: 1px solid var(--border); font-s
         var zzSum = 0;
         for (var i = 1; i <= NUM_MAX; i++) { zzWeights[i] = histZzFreq[i] || 1; zzSum += zzWeights[i]; }
 
+        // Pre-allocate typed arrays outside inner loop to reduce GC pressure
+        var tempW = new Float64Array(NUM_MAX + 1);
+        var zzTempW = new Float64Array(NUM_MAX + 1);
+        var drawnFlags = new Uint8Array(NUM_MAX + 1);
+
         var completed = 0;
         var startTime = performance.now();
 
         while (completed < totalIterations) {
             var batchEnd = Math.min(completed + BATCH, totalIterations);
             for (var iter = completed; iter < batchEnd; iter++) {
-                var tempW = new Float64Array(weights);
+                tempW.set(weights);
                 var tempSum = wSum;
-                var drawn = [];
+                drawnFlags.fill(0);
                 for (var k = 0; k < DRAW_COUNT; k++) {
                     var r = Math.random() * tempSum;
                     var acc = 0;
                     for (var j = 1; j <= NUM_MAX; j++) {
+                        if (tempW[j] === 0) continue;
                         acc += tempW[j];
-                        if (acc >= r) { results[j]++; drawn.push(j); tempSum -= tempW[j]; tempW[j] = 0; break; }
+                        if (acc >= r) { results[j]++; drawnFlags[j] = 1; tempSum -= tempW[j]; tempW[j] = 0; break; }
                     }
                 }
-                var zzTempW = new Float64Array(zzWeights);
+                zzTempW.set(zzWeights);
                 var zzTempSum = 0;
                 for (var j = 1; j <= NUM_MAX; j++) {
-                    if (drawn.indexOf(j) !== -1) zzTempW[j] = 0;
+                    if (drawnFlags[j]) zzTempW[j] = 0;
                     zzTempSum += zzTempW[j];
                 }
                 var r2 = Math.random() * zzTempSum;
                 var acc2 = 0;
                 for (var j = 1; j <= NUM_MAX; j++) {
+                    if (zzTempW[j] === 0) continue;
                     acc2 += zzTempW[j];
                     if (acc2 >= r2) { zzResults[j]++; break; }
                 }
@@ -652,12 +660,14 @@ footer { padding: var(--space-xl) 0; border-top: 1px solid var(--border); font-s
         });
         document.getElementById('barChart').innerHTML = bars;
 
-        var ci95 = 1.96 * stdDev;
-        var expectedPct = (DRAW_COUNT / NUM_MAX * 100).toFixed(2);
+        var p = DRAW_COUNT / NUM_MAX;
+        var se = Math.sqrt(p * (1 - p) / iterations);
+        var ci95 = 1.96 * iterations * se;
+        var expectedPct = (p * 100).toFixed(2);
         document.getElementById('confidenceInfo').innerHTML =
             '<strong>Statistische Einordnung:</strong> Bei einer fairen Lotterie w\u00e4re die erwartete Ziehungswahrscheinlichkeit jeder Zahl ' + expectedPct + ' % (6/45). ' +
-            'Das 95%-Konfidenzintervall der Simulation liegt bei ' + parseInt(meanFreq).toLocaleString('de-AT') + ' \u00b1 ' + ci95.toFixed(0) + ' Ziehungen pro Zahl. ' +
-            'Abweichungen innerhalb dieses Intervalls sind statistisch normal und kein Hinweis auf eine tats\u00e4chliche Tendenz.';
+            'Das 95%-Konfidenzintervall (Binomialverteilung) liegt bei ' + parseInt(meanFreq).toLocaleString('de-AT') + ' \u00b1 ' + ci95.toFixed(0) + ' Ziehungen pro Zahl. ' +
+            'Die beobachtete Streuung (Standardabweichung: ' + stdDev.toFixed(0) + ') zeigt die nat\u00fcrliche Variation zwischen den Zahlen.';
 
         var ticketNums = hotNums.map(function(n) { return n.num; }).sort(function(a, b) { return a - b; });
         renderTicket(ticketNums, zzResults);
@@ -713,21 +723,30 @@ footer { padding: var(--space-xl) 0; border-top: 1px solid var(--border); font-s
 
         simResults = result.results;
         simZzResults = result.zzResults;
+        lastSimIterations = iterations;
         progressFill.style.width = '100%';
         progressPct.textContent = '100 %';
         progressLabel.textContent = 'Simulation abgeschlossen';
 
+        // Reset animation for re-runs
+        var resSection = document.getElementById('resultsSection');
+        var tickSection = document.getElementById('ticketSection');
+        resSection.classList.remove('visible');
+        tickSection.classList.remove('visible');
+
+        renderResults(result.results, result.zzResults, iterations, result.elapsed);
+        switchHeatmapView('simulation');
+
+        // Re-enable button after render + animation completes
         setTimeout(function() {
             progressWrap.classList.remove('active');
             btnRun.disabled = false;
             btnRun.textContent = 'Neue Simulation starten';
         }, 800);
 
-        renderResults(result.results, result.zzResults, iterations, result.elapsed);
-        switchHeatmapView('simulation');
         setTimeout(function() {
             document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 200);
+        }, 50);
     });
 
     document.getElementById('heatmapToggle').addEventListener('click', function(e) {
