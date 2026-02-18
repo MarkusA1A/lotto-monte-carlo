@@ -9,7 +9,7 @@
 <title>Lotto Analyse — Monte-Carlo-Simulation 6 aus 45</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -23,7 +23,7 @@
     --border-strong: rgba(0,0,0,0.14);
     --text: #1a1c24;
     --text-sec: #4a4c5a;
-    --text-muted: #6e7080;
+    --text-muted: #595b6d;
     --accent: #2c5ce6;
     --accent-dim: rgba(44,92,230,0.08);
     --accent-text: #2050d0;
@@ -238,8 +238,12 @@ input[type="range"]::-moz-range-track {
 .progress-wrap { margin-top: var(--space-lg); display: none; }
 .progress-wrap.active { display: block; }
 .progress-header { display: flex; justify-content: space-between; margin-bottom: var(--space-sm); font-size: 0.75rem; color: var(--text-sec); font-variant-numeric: tabular-nums; }
-.progress-track { width: 100%; height: 4px; background: var(--interactive); border-radius: 2px; overflow: hidden; }
-.progress-fill { height: 100%; width: 0%; background: var(--accent); border-radius: 2px; transition: width 0.1s linear; }
+.progress-track { width: 100%; height: 4px; border: none; background: var(--interactive); border-radius: 2px; overflow: hidden; }
+/* Native progress styling */
+progress.progress-track { -webkit-appearance: none; appearance: none; }
+progress.progress-track::-webkit-progress-bar { background: var(--interactive); border-radius: 2px; overflow: hidden; }
+progress.progress-track::-webkit-progress-value { background: var(--accent); border-radius: 2px; transition: width 0.1s linear; }
+progress.progress-track::-moz-progress-bar { background: var(--accent); border-radius: 2px; }
 
 /* ── Results ── */
 .results-section { display: none; animation: fadeUp 0.4s ease both; }
@@ -396,7 +400,7 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
 <div class="container">
 
     <header>
-        <img class="header-image" src="assets/casino_monte_carlo.jpg" alt="Casino de Monte-Carlo, Monaco — Namensgeber der Monte-Carlo-Methode" width="880" height="220">
+        <img class="header-image" src="assets/casino_monte_carlo.jpg" alt="Casino de Monte-Carlo, Monaco — Namensgeber der Monte-Carlo-Methode" width="880" height="220" fetchpriority="high">
         <div class="header-content">
             <div class="header-label">Statistische Analyse &middot; &Ouml;sterreichisches Lotto</div>
             <h1>Lotto 6 aus 45</h1>
@@ -445,10 +449,10 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
         <div class="section-label">H&auml;ufigkeitsanalyse</div>
         <div class="heatmap-wrap">
             <div class="view-toggle" id="heatmapToggle" role="tablist" aria-label="Datenquelle f&uuml;r Heatmap">
-                <button type="button" class="active" data-view="historical" role="tab" aria-selected="true">Historische Daten</button>
-                <button type="button" data-view="simulation" id="btnSimView" disabled role="tab" aria-selected="false">Simulationsergebnis</button>
+                <button type="button" class="active" data-view="historical" role="tab" aria-selected="true" aria-controls="heatmap" id="btnHistView">Historische Daten</button>
+                <button type="button" data-view="simulation" id="btnSimView" disabled role="tab" aria-selected="false" aria-controls="heatmap">Simulationsergebnis</button>
             </div>
-            <ul class="heatmap-grid" id="heatmap"></ul>
+            <ul class="heatmap-grid" id="heatmap" role="tabpanel" aria-labelledby="btnHistView"></ul>
             <div class="heatmap-legend">
                 <span>selten</span>
                 <div class="legend-bar"></div>
@@ -463,7 +467,7 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
             <div class="sim-field">
                 <label for="iterSlider">Anzahl Durchl&auml;ufe</label>
                 <div class="slider-wrap">
-                    <input type="range" id="iterSlider" min="0" max="4" step="1" value="2" aria-label="Anzahl Simulationsdurchl&auml;ufe">
+                    <input type="range" id="iterSlider" min="0" max="4" step="1" value="2">
                     <span class="slider-value" id="iterValue">100.000</span>
                 </div>
             </div>
@@ -474,9 +478,7 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
                 <span id="progressLabel" aria-live="polite">Simulation l&auml;uft ...</span>
                 <span id="progressPct">0 %</span>
             </div>
-            <div class="progress-track" id="progressTrack">
-                <div class="progress-fill" id="progressFill"></div>
-            </div>
+            <progress class="progress-track" id="progressTrack" value="0" max="100" aria-label="Simulationsfortschritt"></progress>
         </div>
     </section>
 
@@ -520,7 +522,7 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
     </main>
 
     <footer>
-        <div class="footer-copyright">&copy; 2025 Markus O. Thalhamer</div>
+        <div class="footer-copyright">&copy; 2026 Markus O. Thalhamer</div>
         <div class="footer-meta">
             <a href="mailto:mthalhamer@thalhamer.com">mthalhamer@thalhamer.com</a>
             &middot; Entwickelt mit Unterst&uuml;tzung von <strong>Claude</strong> (Anthropic)
@@ -584,7 +586,7 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
 
     let currentView = 'historical';
     let simResults = null;
-    let simZzResults = null;
+
     let lastSimIterations = 0;
 
     /* ── Render: Data Basis Stats ── */
@@ -629,7 +631,7 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
             const t = (f - min) / range;
             const bg = heatColor(t);
             const textColor = t < 0.3 ? 'var(--cold)' : t > 0.7 ? 'var(--hot)' : 'var(--text-sec)';
-            html += '<li class="heatmap-cell" tabindex="0" style="background:' + bg + '" data-num="' + i + '" data-freq="' + f + '">' +
+            html += '<li class="heatmap-cell" tabindex="0" style="background:' + bg + '" data-num="' + i + '" data-freq="' + f + '" aria-label="Zahl ' + i + ', ' + f + ' mal gezogen">' +
                 '<span class="heatmap-num" style="color:' + textColor + '">' + i + '</span>' +
                 '<span class="heatmap-freq" style="color:' + textColor + '">' + f + '\u00d7</span></li>';
         }
@@ -674,24 +676,23 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
 
     function hideTooltip() { tooltip.classList.remove('show'); }
 
-    /* Mouse events via delegation on grid */
-    heatmapGrid.addEventListener('mouseenter', function(e) {
+    /* Mouse events via delegation on grid (mouseover/mouseout bubble, unlike mouseenter/mouseleave) */
+    heatmapGrid.addEventListener('mouseover', function(e) {
         const cell = e.target.closest('.heatmap-cell');
         if (cell) showTooltipForCell(cell, e.clientX, e.clientY);
-    }, true);
+    });
 
     heatmapGrid.addEventListener('mousemove', function(e) {
-        const cell = e.target.closest('.heatmap-cell');
-        if (cell) {
+        if (tooltip.classList.contains('show')) {
             tooltip.style.left = (e.clientX + 12) + 'px';
             tooltip.style.top = (e.clientY - 36) + 'px';
         }
     });
 
-    heatmapGrid.addEventListener('mouseleave', function(e) {
-        const cell = e.target.closest('.heatmap-cell');
-        if (cell) hideTooltip();
-    }, true);
+    /* Hide tooltip when mouse leaves grid entirely */
+    heatmapGrid.addEventListener('mouseleave', function() {
+        hideTooltip();
+    });
 
     /* Keyboard: focus/blur on cells */
     heatmapGrid.addEventListener('focusin', function(e) {
@@ -881,8 +882,7 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
     const iterValue = document.getElementById('iterValue');
     const btnRun = document.getElementById('btnRun');
     const progressWrap = document.getElementById('progressWrap');
-    const progressFill = document.getElementById('progressFill');
-    const progressPct = document.getElementById('progressPct');
+        const progressPct = document.getElementById('progressPct');
     const progressLabel = document.getElementById('progressLabel');
 
     iterSlider.addEventListener('input', function() {
@@ -894,12 +894,12 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
         btnRun.disabled = true;
         btnRun.textContent = 'Simulation l\u00e4uft \u2026';
         progressWrap.classList.add('active');
-        progressFill.style.width = '0%';
+        document.getElementById('progressTrack').value = 0;
 
         try {
             const result = await runSimulation(iterations, function(pct, ms) {
                 const p = (pct * 100).toFixed(1);
-                progressFill.style.width = p + '%';
+                document.getElementById('progressTrack').value = Math.round(pct * 100);
                 progressPct.textContent = p + ' %';
                 if (pct > PROGRESS_THRESHOLD) {
                     const remaining = ((ms / pct) * (1 - pct) / 1000).toFixed(0);
@@ -908,9 +908,8 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
             });
 
             simResults = result.results;
-            simZzResults = result.zzResults;
             lastSimIterations = iterations;
-            progressFill.style.width = '100%';
+            document.getElementById('progressTrack').value = 100;
             progressPct.textContent = '100 %';
             progressLabel.textContent = 'Simulation abgeschlossen';
 
@@ -931,15 +930,19 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
             }, 800);
 
             requestAnimationFrame(function() {
-                document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                document.getElementById('resultsSection').scrollIntoView({ behavior: prefersReduced ? 'instant' : 'smooth', block: 'start' });
             });
         } catch (err) {
-            /* Recover UI state on unexpected error */
-            progressWrap.classList.remove('active');
-            btnRun.disabled = false;
-            btnRun.textContent = 'Simulation starten';
-            progressLabel.textContent = 'Fehler bei der Simulation';
+            /* Show error for 3s, then recover UI state */
+            progressLabel.textContent = 'Fehler bei der Simulation. Bitte erneut versuchen.';
+            progressPct.textContent = '';
             console.error('Simulation error:', err);
+            setTimeout(function() {
+                progressWrap.classList.remove('active');
+                btnRun.disabled = false;
+                btnRun.textContent = 'Simulation starten';
+            }, 3000);
         }
     });
 
@@ -950,11 +953,13 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
 
     function switchHeatmapView(view) {
         currentView = view;
+        const activeTabId = view === 'simulation' ? 'btnSimView' : 'btnHistView';
         document.getElementById('heatmapToggle').querySelectorAll('button').forEach(function(b) {
             const isActive = b.dataset.view === view;
             b.classList.toggle('active', isActive);
             b.setAttribute('aria-selected', isActive ? 'true' : 'false');
         });
+        document.getElementById('heatmap').setAttribute('aria-labelledby', activeTabId);
         if (view === 'simulation' && simResults) { renderHeatmap(simResults); }
         else { renderHeatmap(histFreq); }
     }
