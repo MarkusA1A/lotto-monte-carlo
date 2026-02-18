@@ -1,0 +1,11 @@
+{
+  "name": "lotto-monte-carlo",
+  "version": "1.0.0",
+  "description": "Monte-Carlo-Simulation für österreichisches Lotto 6 aus 45",
+  "scripts": {
+    "start": "npx serve -s . -l $PORT"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
