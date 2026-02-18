@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de-AT">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
@@ -289,6 +289,11 @@ input[type="range"]::-moz-range-thumb {
 
 footer { padding: var(--space-xl) 0; border-top: 1px solid var(--border); font-size: 0.75rem; color: var(--text-muted); text-align: center; }
 
+.mb-lg { margin-bottom: var(--space-lg); }
+.mt-md { margin-top: var(--space-md); }
+.num-badge-wrap { text-align: center; }
+.ticket-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: var(--space-md); }
+
 .view-toggle { display: inline-flex; background: var(--bg-secondary); border-radius: var(--radius-sm); border: 1px solid var(--border); overflow: hidden; margin-bottom: var(--space-md); }
 .view-toggle button { padding: var(--space-sm) var(--space-md); background: none; border: none; font-family: var(--font-body); font-size: 0.75rem; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: all 0.2s ease; }
 .view-toggle button.active { background: var(--interactive); color: var(--text); }
@@ -303,6 +308,7 @@ footer { padding: var(--space-xl) 0; border-top: 1px solid var(--border); font-s
     box-shadow: 0 8px 30px rgba(0,0,0,0.5); white-space: nowrap; font-variant-numeric: tabular-nums;
 }
 .tooltip.show { display: block; }
+.tooltip-source { color: var(--text-muted); }
 
 @media (max-width: 640px) {
     .container { padding: 0 var(--space-md); }
@@ -377,11 +383,11 @@ footer { padding: var(--space-xl) 0; border-top: 1px solid var(--border); font-s
     <section class="section-border">
         <div class="section-label">H&auml;ufigkeitsanalyse</div>
         <div class="heatmap-wrap">
-            <div class="view-toggle" id="heatmapToggle">
-                <button type="button" class="active" data-view="historical">Historische Daten</button>
-                <button type="button" data-view="simulation" id="btnSimView" disabled>Simulationsergebnis</button>
+            <div class="view-toggle" id="heatmapToggle" role="tablist" aria-label="Datenquelle f&uuml;r Heatmap">
+                <button type="button" class="active" data-view="historical" role="tab" aria-selected="true">Historische Daten</button>
+                <button type="button" data-view="simulation" id="btnSimView" disabled role="tab" aria-selected="false">Simulationsergebnis</button>
             </div>
-            <div class="heatmap-grid" id="heatmap"></div>
+            <div class="heatmap-grid" id="heatmap" role="grid" aria-label="H&auml;ufigkeits-Heatmap der 45 Lottozahlen"></div>
             <div class="heatmap-legend">
                 <span>selten</span>
                 <div class="legend-bar"></div>
@@ -396,26 +402,26 @@ footer { padding: var(--space-xl) 0; border-top: 1px solid var(--border); font-s
             <div class="sim-field">
                 <label>Anzahl Durchl&auml;ufe</label>
                 <div class="slider-wrap">
-                    <input type="range" id="iterSlider" min="0" max="4" step="1" value="2">
+                    <input type="range" id="iterSlider" min="0" max="4" step="1" value="2" aria-label="Anzahl Simulationsdurchl&auml;ufe">
                     <span class="slider-value" id="iterValue">100.000</span>
                 </div>
             </div>
-            <button type="button" class="btn btn-primary" id="btnRun">Simulation starten</button>
+            <button type="button" class="btn btn-primary" id="btnRun" aria-label="Monte-Carlo-Simulation starten">Simulation starten</button>
         </div>
-        <div class="progress-wrap" id="progressWrap">
+        <div class="progress-wrap" id="progressWrap" role="group" aria-label="Simulationsfortschritt">
             <div class="progress-header">
-                <span id="progressLabel">Simulation l&auml;uft ...</span>
-                <span id="progressPct">0 %</span>
+                <span id="progressLabel" aria-live="polite">Simulation l&auml;uft ...</span>
+                <span id="progressPct" aria-live="polite">0 %</span>
             </div>
-            <div class="progress-track">
+            <div class="progress-track" id="progressTrack">
                 <div class="progress-fill" id="progressFill"></div>
             </div>
         </div>
     </section>
 
-    <section class="section-border results-section" id="resultsSection">
+    <section class="section-border results-section" id="resultsSection" aria-live="polite">
         <div class="section-label">Ergebnisse</div>
-        <div class="stats-row" id="simStats" style="margin-bottom: var(--space-lg)"></div>
+        <div class="stats-row mb-lg" id="simStats"></div>
         <div class="results-grid">
             <div class="card">
                 <h3>H&auml;ufigste Zahlen</h3>
@@ -426,18 +432,18 @@ footer { padding: var(--space-xl) 0; border-top: 1px solid var(--border); font-s
                 <div class="number-list" id="coldNumbers"></div>
             </div>
         </div>
-        <div class="card bar-chart" style="margin-top: var(--space-md)">
+        <div class="card bar-chart mt-md">
             <h3>Simulationsverteilung aller 45 Zahlen</h3>
             <div id="barChart"></div>
         </div>
         <div class="confidence-info" id="confidenceInfo"></div>
     </section>
 
-    <section class="section-border ticket" id="ticketSection">
+    <section class="section-border ticket" id="ticketSection" aria-live="polite">
         <div class="ticket-label">Tippvorschlag basierend auf Simulation</div>
         <div class="ticket-numbers" id="ticketNumbers"></div>
         <div class="ticket-super" id="ticketSuper"></div>
-        <p style="font-size:0.75rem; color:var(--text-muted); margin-top:var(--space-md);">
+        <p class="ticket-hint">
             Dieser Tipp basiert auf gewichteten Wahrscheinlichkeiten und stellt keine Gewinngarantie dar.
         </p>
     </section>
@@ -464,6 +470,11 @@ footer { padding: var(--space-xl) 0; border-top: 1px solid var(--border); font-s
     var historicalData = RAW_DATA.map(function(d) {
         return { date: d.d, numbers: d.n, zusatzzahl: d.z };
     });
+
+    if (!historicalData.length) {
+        document.body.innerHTML = '<p style="padding:2rem;color:#dc5843">Fehler: Keine Ziehungsdaten vorhanden.</p>';
+        return;
+    }
 
     var NUM_MAX = 45;
     var DRAW_COUNT = 6;
@@ -553,7 +564,7 @@ footer { padding: var(--space-xl) 0; border-top: 1px solid var(--border); font-s
         var source = currentView === 'simulation' ? 'Simulation' : 'Historisch';
         var total = currentView === 'simulation' ? lastSimIterations : historicalData.length;
         var pct = ((freq / total) * 100).toFixed(2);
-        tooltip.innerHTML = '<strong>Zahl ' + num + '</strong> \u00b7 ' + freq.toLocaleString('de-AT') + '\u00d7 gezogen \u00b7 ' + pct + ' % <span style="color:var(--text-muted)">(' + source + ')</span>';
+        tooltip.innerHTML = '<strong>Zahl ' + num + '</strong> \u00b7 ' + freq.toLocaleString('de-AT') + '\u00d7 gezogen \u00b7 ' + pct + '\u202f% <span class="tooltip-source">(' + source + ')</span>';
         tooltip.classList.add('show');
     }
 
@@ -592,11 +603,19 @@ footer { padding: var(--space-xl) 0; border-top: 1px solid var(--border); font-s
                 for (var k = 0; k < DRAW_COUNT; k++) {
                     var r = Math.random() * tempSum;
                     var acc = 0;
+                    var picked = 0;
                     for (var j = 1; j <= NUM_MAX; j++) {
                         if (tempW[j] === 0) continue;
                         acc += tempW[j];
-                        if (acc >= r) { results[j]++; drawnFlags[j] = 1; tempSum -= tempW[j]; tempW[j] = 0; break; }
+                        if (acc >= r) { picked = j; break; }
                     }
+                    // Fallback: if floating-point rounding prevented a pick, select last available number
+                    if (picked === 0) {
+                        for (var j = NUM_MAX; j >= 1; j--) {
+                            if (tempW[j] > 0) { picked = j; break; }
+                        }
+                    }
+                    results[picked]++; drawnFlags[picked] = 1; tempSum -= tempW[picked]; tempW[picked] = 0;
                 }
                 zzTempW.set(zzWeights);
                 var zzTempSum = 0;
@@ -604,13 +623,21 @@ footer { padding: var(--space-xl) 0; border-top: 1px solid var(--border); font-s
                     if (drawnFlags[j]) zzTempW[j] = 0;
                     zzTempSum += zzTempW[j];
                 }
+                if (zzTempSum <= 0) continue;
                 var r2 = Math.random() * zzTempSum;
                 var acc2 = 0;
+                var zzPicked = 0;
                 for (var j = 1; j <= NUM_MAX; j++) {
                     if (zzTempW[j] === 0) continue;
                     acc2 += zzTempW[j];
-                    if (acc2 >= r2) { zzResults[j]++; break; }
+                    if (acc2 >= r2) { zzPicked = j; break; }
                 }
+                if (zzPicked === 0) {
+                    for (var j = NUM_MAX; j >= 1; j--) {
+                        if (zzTempW[j] > 0) { zzPicked = j; break; }
+                    }
+                }
+                if (zzPicked > 0) zzResults[zzPicked]++;
             }
             completed = batchEnd;
             onProgress(completed / totalIterations, performance.now() - startTime);
@@ -640,11 +667,11 @@ footer { padding: var(--space-xl) 0; border-top: 1px solid var(--border); font-s
         var coldNums = sorted.slice(-6).reverse();
 
         document.getElementById('hotNumbers').innerHTML = hotNums.map(function(n) {
-            return '<div style="text-align:center"><div class="number-badge hot">' + n.num + '</div><div class="freq-label">' + n.freq.toLocaleString('de-AT') + '\u00d7</div></div>';
+            return '<div class="num-badge-wrap"><div class="number-badge hot">' + n.num + '</div><div class="freq-label">' + n.freq.toLocaleString('de-AT') + '\u00d7</div></div>';
         }).join('');
 
         document.getElementById('coldNumbers').innerHTML = coldNums.map(function(n) {
-            return '<div style="text-align:center"><div class="number-badge cold">' + n.num + '</div><div class="freq-label">' + n.freq.toLocaleString('de-AT') + '\u00d7</div></div>';
+            return '<div class="num-badge-wrap"><div class="number-badge cold">' + n.num + '</div><div class="freq-label">' + n.freq.toLocaleString('de-AT') + '\u00d7</div></div>';
         }).join('');
 
         var byNum = sorted.slice().sort(function(a, b) { return a.num - b.num; });
@@ -665,9 +692,11 @@ footer { padding: var(--space-xl) 0; border-top: 1px solid var(--border); font-s
         var ci95 = 1.96 * iterations * se;
         var expectedPct = (p * 100).toFixed(2);
         document.getElementById('confidenceInfo').innerHTML =
-            '<strong>Statistische Einordnung:</strong> Bei einer fairen Lotterie w\u00e4re die erwartete Ziehungswahrscheinlichkeit jeder Zahl ' + expectedPct + ' % (6/45). ' +
-            'Das 95%-Konfidenzintervall (Binomialverteilung) liegt bei ' + parseInt(meanFreq).toLocaleString('de-AT') + ' \u00b1 ' + ci95.toFixed(0) + ' Ziehungen pro Zahl. ' +
-            'Die beobachtete Streuung (Standardabweichung: ' + stdDev.toFixed(0) + ') zeigt die nat\u00fcrliche Variation zwischen den Zahlen.';
+            '<strong>Statistische Einordnung:</strong><br>' +
+            '<em>Theoretische Erwartung:</em> Bei einer fairen Lotterie betr\u00e4gt die Ziehungswahrscheinlichkeit jeder Zahl ' + expectedPct + '\u202f% (6\u202f/\u202f45). ' +
+            'Bei ' + iterations.toLocaleString('de-AT') + ' Durchl\u00e4ufen ergibt das eine erwartete H\u00e4ufigkeit von ' + parseInt(meanFreq).toLocaleString('de-AT') + ' pro Zahl.<br>' +
+            '<em>95\u202f%-Konfidenzintervall</em> (Binomialverteilung): ' + parseInt(meanFreq).toLocaleString('de-AT') + ' \u00b1\u202f' + ci95.toFixed(0) + ' — d.\u202fh. in 95\u202f% der F\u00e4lle liegt die H\u00e4ufigkeit jeder Zahl in diesem Bereich.<br>' +
+            '<em>Beobachtete Standardabweichung:</em> \u00b1\u202f' + stdDev.toFixed(0) + ' — misst die tats\u00e4chliche Streuung der H\u00e4ufigkeiten zwischen den 45 Zahlen in dieser Simulation.';
 
         var ticketNums = hotNums.map(function(n) { return n.num; }).sort(function(a, b) { return a - b; });
         renderTicket(ticketNums, zzResults);
@@ -689,6 +718,7 @@ footer { padding: var(--space-xl) 0; border-top: 1px solid var(--border); font-s
 
     function calcStdDev(arr) {
         var n = arr.length;
+        if (n === 0) return 0;
         var mean = arr.reduce(function(a, b) { return a + b; }, 0) / n;
         var variance = arr.reduce(function(sum, val) { return sum + Math.pow(val - mean, 2); }, 0) / n;
         return Math.sqrt(variance);
@@ -758,7 +788,9 @@ footer { padding: var(--space-xl) 0; border-top: 1px solid var(--border); font-s
     function switchHeatmapView(view) {
         currentView = view;
         document.getElementById('heatmapToggle').querySelectorAll('button').forEach(function(b) {
-            b.classList.toggle('active', b.dataset.view === view);
+            var isActive = b.dataset.view === view;
+            b.classList.toggle('active', isActive);
+            b.setAttribute('aria-selected', isActive ? 'true' : 'false');
         });
         if (view === 'simulation' && simResults) { renderHeatmap(simResults); }
         else { renderHeatmap(histFreq); }
