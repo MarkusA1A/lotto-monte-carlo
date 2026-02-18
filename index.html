@@ -728,25 +728,26 @@ footer { padding: var(--space-xl) 0; border-top: 1px solid var(--border); font-s
         progressPct.textContent = '100 %';
         progressLabel.textContent = 'Simulation abgeschlossen';
 
-        // Reset animation for re-runs
+        // Reset animation for re-runs: force reflow between remove and add
         var resSection = document.getElementById('resultsSection');
         var tickSection = document.getElementById('ticketSection');
         resSection.classList.remove('visible');
         tickSection.classList.remove('visible');
+        void resSection.offsetHeight;
 
         renderResults(result.results, result.zzResults, iterations, result.elapsed);
         switchHeatmapView('simulation');
 
-        // Re-enable button after render + animation completes
+        // Re-enable button after render and animation (400ms) complete
         setTimeout(function() {
             progressWrap.classList.remove('active');
             btnRun.disabled = false;
             btnRun.textContent = 'Neue Simulation starten';
         }, 800);
 
-        setTimeout(function() {
+        requestAnimationFrame(function() {
             document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 50);
+        });
     });
 
     document.getElementById('heatmapToggle').addEventListener('click', function(e) {
