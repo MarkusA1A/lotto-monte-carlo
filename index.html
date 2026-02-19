@@ -828,9 +828,7 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
         el = document.getElementById('drawCountFooter'); if (el) el.textContent = fmt;
         el = document.getElementById('drawCountSource');
         if (el) {
-            el.innerHTML = storedCount > 0
-                ? '167\u2009KB embedded + ' + storedCount + ' neue'
-                : '167\u2009KB embedded';
+            el.innerHTML = storedCount > 0 ? '167\u2009KB embedded + ' + storedCount + ' neue' : '167\u2009KB embedded';
         }
     }
 
@@ -885,8 +883,7 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
     async function checkForNewDraws() {
         showFetchStatus('checking', 'Pr\u00fcfe auf neue Ziehungsergebnisse\u2026');
         try {
-            var lastDate = historicalData.length > 0
-                ? historicalData[historicalData.length - 1].date : '1986-01-01';
+            var lastDate = historicalData.length > 0 ? historicalData[historicalData.length - 1].date : '1986-01-01';
             var newDraws = await fetchNewDraws(lastDate);
             updateLastCheckTime();
             if (newDraws.length > 0) {
@@ -1282,18 +1279,12 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
             '<div class="ci-detail">' +
             '<span class="ci-detail-label">Normaler Schwankungsbereich:</span> ' +
             'Jede Zahl sollte zwischen <strong>' + ciLo.toLocaleString('de-AT') + '</strong> und <strong>' + ciHi.toLocaleString('de-AT') + '</strong>\u00d7 vorkommen. ' +
-            (outlierCount === 0
-                ? 'Alle 45 Zahlen liegen in diesem Bereich — die Simulation verh\u00e4lt sich wie erwartet.'
-                : outlierCount + ' von 45 Zahlen liegen au\u00dferhalb dieses Bereichs. Bei 45 Zahlen ist statistisch zu erwarten, dass ca.\u00a02\u20133 Zahlen leicht au\u00dferhalb landen.') +
+            (outlierCount === 0 ? 'Alle 45 Zahlen liegen in diesem Bereich — die Simulation verh\u00e4lt sich wie erwartet.' : outlierCount + ' von 45 Zahlen liegen au\u00dferhalb dieses Bereichs. Bei 45 Zahlen ist statistisch zu erwarten, dass ca.\u00a02\u20133 Zahlen leicht au\u00dferhalb landen.') +
             '</div>' +
             '<div class="ci-detail">' +
             '<span class="ci-detail-label">Streuung:</span> ' +
             'Die tats\u00e4chliche Abweichung betr\u00e4gt \u00b1\u202f' + stdDev.toFixed(0) + ' gegen\u00fcber dem Erwartungswert von \u00b1\u202f' + expectedStdDev.toFixed(0) + '. ' +
-            (stdDev <= expectedStdDev * 1.15
-                ? 'Das passt gut zusammen — die Simulation streut so stark wie erwartet.'
-                : stdDev <= expectedStdDev * 1.5
-                    ? 'Die Streuung ist etwas h\u00f6her als bei reinem Zufall, was an der historischen Gewichtung liegt.'
-                    : 'Die Streuung ist deutlich h\u00f6her als bei reinem Zufall — die historische Gewichtung hat einen sichtbaren Effekt.') +
+            (stdDev <= expectedStdDev * 1.15 ? 'Das passt gut zusammen — die Simulation streut so stark wie erwartet.' : stdDev <= expectedStdDev * 1.5 ? 'Die Streuung ist etwas h\u00f6her als bei reinem Zufall, was an der historischen Gewichtung liegt.' : 'Die Streuung ist deutlich h\u00f6her als bei reinem Zufall — die historische Gewichtung hat einen sichtbaren Effekt.') +
             '</div></div>' +
 
             '<div class="ci-section">' +
