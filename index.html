@@ -442,7 +442,7 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
         <div class="header-content">
             <div class="header-label">Statistische Analyse &middot; &Ouml;sterreichisches Lotto</div>
             <h1>Lotto 6 aus 45</h1>
-            <p class="header-sub">Monte-Carlo-Simulation auf Basis von <span id="drawCountHeader">3532</span> echten Ziehungen seit 1986. Ein analytisches Werkzeug zur Untersuchung von H&auml;ufigkeitsverteilungen — kein Vorhersageinstrument.</p>
+            <p class="header-sub">Monte-Carlo-Simulation auf Basis von <span id="drawCountHeader">3533</span> echten Ziehungen seit 1986. Ein analytisches Werkzeug zur Untersuchung von H&auml;ufigkeitsverteilungen — kein Vorhersageinstrument.</p>
         </div>
     </header>
 
@@ -468,7 +468,7 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
                 <h3>Wie funktioniert sie hier?</h3>
                 <div class="method-step">
                     <div class="step-num">1</div>
-                    <div class="step-text">Analyse der H&auml;ufigkeitsverteilung aller 45 Zahlen und der Zusatzzahl in <span id="drawCountMethod">3532</span> echten Ziehungen seit 1986</div>
+                    <div class="step-text">Analyse der H&auml;ufigkeitsverteilung aller 45 Zahlen und der Zusatzzahl in <span id="drawCountMethod">3533</span> echten Ziehungen seit 1986</div>
                 </div>
                 <div class="method-step">
                     <div class="step-num">2</div>
@@ -584,7 +584,7 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
             Letzte Pr&uuml;fung: <span id="lastCheckTime">&mdash;</span> &middot; N&auml;chste Pr&uuml;fung: <span id="nextCheckTime">&mdash;</span>
         </div>
         <div class="image-credit">
-            <span id="drawCountFooter">3.532</span> Ziehungen (<span id="drawCountSource">167&thinsp;KB embedded</span>)
+            <span id="drawCountFooter">3.533</span> Ziehungen (<span id="drawCountSource">167&thinsp;KB embedded</span>)
         </div>
     </footer>
 </div>
@@ -692,7 +692,7 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
             var line = lines[i].trim();
             if (!line) continue;
             var c = line.split(';');
-            if (c[1] !== 'aufsteigend') continue;
+            if (c.length < 10 || c[1] !== 'aufsteigend') continue;
             var dp = c[0].replace(/\.$/, '').split('.');
             if (dp.length < 2) continue;
             var iso = year + '-' + dp[1].padStart(2, '0') + '-' + dp[0].padStart(2, '0');
@@ -715,64 +715,93 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
     async function fetchNewDraws(lastDate) {
         var yr = new Date().getFullYear();
         var url = 'https://statics.win2day.at/media/NN_W2D_STAT_Lotto_' + yr + '.csv';
+        var draws = [];
         try {
             var resp = await corsAwareFetch(url);
             var text = await resp.text();
-            return parseWin2dayCSV(text, yr, lastDate);
+            draws = parseWin2dayCSV(text, yr, lastDate);
         } catch (e) {
             console.warn('Win2day-Fetch fehlgeschlagen:', e.message);
-            var now = new Date();
-            if (now.getMonth() === 0 && lastDate.substring(0, 4) === String(yr - 1)) {
-                try {
-                    var r2 = await corsAwareFetch('https://statics.win2day.at/media/NN_W2D_STAT_Lotto_' + (yr - 1) + '.csv');
-                    return parseWin2dayCSV(await r2.text(), yr - 1, lastDate);
-                } catch (e2) { /* give up */ }
-            }
-            return [];
         }
+        /* In January: also try previous year if current year returned empty and last known draw is from prev year */
+        if (draws.length === 0 && new Date().getMonth() === 0 && lastDate.substring(0, 4) === String(yr - 1)) {
+            try {
+                var r2 = await corsAwareFetch('https://statics.win2day.at/media/NN_W2D_STAT_Lotto_' + (yr - 1) + '.csv');
+                draws = parseWin2dayCSV(await r2.text(), yr - 1, lastDate);
+            } catch (e2) { /* give up */ }
+        }
+        return draws;
     }
 
     /* ── Auto-Fetch: Timer / Scheduler ── */
 
-    function getNowCET() {
-        return new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Vienna' }));
+    /** Return current CET/CEST date parts {year, month, day, hour, minute, dayOfWeek}. */
+    function getCETParts() {
+        var now = new Date();
+        var fmt = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'Europe/Vienna', hour12: false,
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', weekday: 'short'
+        });
+        var p = {};
+        fmt.formatToParts(now).forEach(function(part) { p[part.type] = part.value; });
+        var dayMap = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+        return {
+            year: parseInt(p.year), month: parseInt(p.month), day: parseInt(p.day),
+            hour: parseInt(p.hour === '24' ? '0' : p.hour), minute: parseInt(p.minute),
+            dayOfWeek: dayMap[p.weekday] || 0,
+            /** Total minutes since midnight CET */
+            totalMin: parseInt(p.hour === '24' ? '0' : p.hour) * 60 + parseInt(p.minute)
+        };
     }
 
+    /**
+     * Return most recent past draw as { isoDate, day, hour, minute, minutesAgo }.
+     * All times in CET. Returns null if none found.
+     */
     function getLastDrawTime() {
-        var now = getNowCET();
-        for (var off = 0; off <= 7; off++) {
-            var d = new Date(now); d.setDate(d.getDate() - off);
-            for (var s = 0; s < DRAW_SCHEDULE.length; s++) {
-                if (d.getDay() === DRAW_SCHEDULE[s].day) {
-                    var t = new Date(d); t.setHours(DRAW_SCHEDULE[s].hour, DRAW_SCHEDULE[s].minute, 0, 0);
-                    if (t <= now) return t;
-                }
+        var cet = getCETParts();
+        var nowMin = cet.dayOfWeek * 1440 + cet.totalMin;
+        var best = null, bestAgo = Infinity;
+        for (var s = 0; s < DRAW_SCHEDULE.length; s++) {
+            var drawMin = DRAW_SCHEDULE[s].day * 1440 + DRAW_SCHEDULE[s].hour * 60 + DRAW_SCHEDULE[s].minute;
+            var ago = nowMin - drawMin;
+            if (ago < 0) ago += 7 * 1440;
+            if (ago < bestAgo) {
+                bestAgo = ago;
+                var daysBack = Math.floor(ago / 1440);
+                var dd = new Date(Date.UTC(cet.year, cet.month - 1, cet.day));
+                dd.setUTCDate(dd.getUTCDate() - daysBack);
+                best = {
+                    isoDate: dd.getUTCFullYear() + '-' + String(dd.getUTCMonth() + 1).padStart(2, '0') + '-' + String(dd.getUTCDate()).padStart(2, '0'),
+                    day: DRAW_SCHEDULE[s].day, hour: DRAW_SCHEDULE[s].hour, minute: DRAW_SCHEDULE[s].minute,
+                    minutesAgo: ago
+                };
             }
         }
-        return null;
+        return best;
     }
 
+    /**
+     * Return next upcoming draw as { day, hour, minute, minutesUntil }.
+     * All times in CET. Returns null if none found.
+     */
     function getNextDrawTime() {
-        var now = getNowCET();
-        for (var off = 0; off <= 7; off++) {
-            var d = new Date(now); d.setDate(d.getDate() + off);
-            for (var s = 0; s < DRAW_SCHEDULE.length; s++) {
-                if (d.getDay() === DRAW_SCHEDULE[s].day) {
-                    var t = new Date(d); t.setHours(DRAW_SCHEDULE[s].hour, DRAW_SCHEDULE[s].minute, 0, 0);
-                    if (t > now) return t;
-                }
+        var cet = getCETParts();
+        var nowMin = cet.dayOfWeek * 1440 + cet.totalMin;
+        var best = null, bestUntil = Infinity;
+        for (var s = 0; s < DRAW_SCHEDULE.length; s++) {
+            var drawMin = DRAW_SCHEDULE[s].day * 1440 + DRAW_SCHEDULE[s].hour * 60 + DRAW_SCHEDULE[s].minute;
+            var until = drawMin - nowMin;
+            if (until <= 0) until += 7 * 1440;
+            if (until < bestUntil) {
+                bestUntil = until;
+                best = { day: DRAW_SCHEDULE[s].day, hour: DRAW_SCHEDULE[s].hour, minute: DRAW_SCHEDULE[s].minute, minutesUntil: until };
             }
         }
-        return null;
+        return best;
     }
 
-    function dateToCETIso(d) {
-        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    }
-
-    function formatTimeCET(d) {
-        return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-    }
 
     function formatDateFullDE(iso) {
         var p = iso.split('-');
@@ -803,7 +832,8 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
         try { localStorage.setItem(LS_KEY_LAST_CHECK, new Date().toISOString()); } catch (e) { /* */ }
         var el = document.getElementById('lastCheckTime');
         var meta = document.getElementById('fetchMeta');
-        if (el) el.textContent = formatTimeCET(getNowCET()) + ' Uhr';
+        var cet = getCETParts();
+        if (el) el.textContent = String(cet.hour).padStart(2, '0') + ':' + String(cet.minute).padStart(2, '0') + ' Uhr (CET)';
         if (meta) meta.style.display = '';
     }
 
@@ -814,8 +844,10 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
         var next = getNextDrawTime();
         if (next) {
             var dn = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
-            var checkAt = new Date(next.getTime() + CHECK_DELAY_MS);
-            el.textContent = dn[next.getDay()] + '. ' + formatTimeCET(checkAt) + ' Uhr';
+            var checkMin = next.hour * 60 + next.minute + 30;
+            var checkH = String(Math.floor(checkMin / 60) % 24).padStart(2, '0');
+            var checkM = String(checkMin % 60).padStart(2, '0');
+            el.textContent = dn[next.day] + '. ' + checkH + ':' + checkM + ' Uhr (CET)';
         } else { el.textContent = '\u2014'; }
         if (meta) meta.style.display = '';
     }
@@ -920,9 +952,8 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
     function isMissingLatestDraw() {
         var last = getLastDrawTime();
         if (!last) return false;
-        var lastIso = dateToCETIso(last);
         var known = historicalData.length > 0 ? historicalData[historicalData.length - 1].date : '1986-01-01';
-        return lastIso > known;
+        return last.isoDate > known;
     }
 
     function scheduleNextCheck() {
@@ -933,11 +964,8 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
         }
         var next = getNextDrawTime();
         if (!next) return;
-        var nowCET = getNowCET();
-        var now = new Date();
-        var offsetMs = now.getTime() - nowCET.getTime();
-        var checkAt = new Date(next.getTime() + CHECK_DELAY_MS + offsetMs);
-        var delay = Math.max(checkAt.getTime() - now.getTime(), 60000);
+        /* minutesUntil is in CET — convert to ms and add check delay */
+        var delay = Math.max(next.minutesUntil * 60000 + CHECK_DELAY_MS, 60000);
         if (delay > 24 * 60 * 60 * 1000) delay = 24 * 60 * 60 * 1000;
         fetchTimerId = setTimeout(function() { currentRetries = 0; checkForNewDraws(); }, delay);
         updateNextCheckDisplay();
@@ -1026,8 +1054,9 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
     const heatmapGrid = document.getElementById('heatmap');
 
     function showTooltipForCell(cell, x, y) {
-        const num = cell.dataset.num;
-        const freq = parseInt(cell.dataset.freq);
+        const num = parseInt(cell.dataset.num, 10);
+        if (isNaN(num) || num < 1 || num > NUM_MAX) return;
+        const freq = parseInt(cell.dataset.freq, 10) || 0;
         const source = currentView === 'simulation' ? 'Simulation' : 'Historisch';
         const total = currentView === 'simulation' ? lastSimIterations : historicalData.length;
         const pct = ((freq / total) * 100).toFixed(2);
@@ -1129,10 +1158,12 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
                             if (tempW[j] > 0) { picked = j; break; }
                         }
                     }
-                    results[picked]++;
-                    drawnFlags[picked] = 1;
-                    tempSum -= tempW[picked];
-                    tempW[picked] = 0;
+                    if (picked > 0) {
+                        results[picked]++;
+                        drawnFlags[picked] = 1;
+                        tempSum -= tempW[picked];
+                        tempW[picked] = 0;
+                    }
                 }
 
                 /* Draw Zusatzzahl from remaining 39 numbers, weighted by ZZ historical frequency */
@@ -1310,7 +1341,7 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
             '</div></div>' +
 
             '<hr class="ci-divider">' +
-            '<button class="ci-tech-toggle" onclick="var d=document.getElementById(\'' + ciUid + '\');d.style.display=d.style.display===\'none\'?\'\':\'none\';this.textContent=d.style.display===\'none\'?\'Technische Details einblenden\':\'Technische Details ausblenden\'" type="button">Technische Details einblenden</button>' +
+            '<button class="ci-tech-toggle" id="' + ciUid + 'Btn" type="button">Technische Details einblenden</button>' +
             '<div class="ci-tech-details" id="' + ciUid + '" style="display:none">' +
             '<em>Theoretische Erwartung:</em> Ziehungswahrscheinlichkeit pro Zahl: ' + expectedPct + '\u202f% (6\u202f/\u202f45). ' +
             'Bei ' + iterations.toLocaleString('de-AT') + ' Durchl\u00e4ufen: erwartete H\u00e4ufigkeit ' + parseInt(meanFreq).toLocaleString('de-AT') + ' pro Zahl.<br>' +
@@ -1320,6 +1351,17 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
             '<em>Z-Scores:</em> H\u00e4ufigste Zahl ' + hottest.num + ': z\u202f=\u202f' + hottestZ.toFixed(2) + ' | Seltenste Zahl ' + coldest.num + ': z\u202f=\u202f' + coldestZ.toFixed(2) + '<br>' +
             '<em>Ausrei\u00dfer (\u007cz\u007c\u202f>\u202f1,96):</em> ' + outlierCount + ' von 45 Zahlen (erwartet: ~2,25)' +
             '</div>';
+
+        /* Bind tech-details toggle via addEventListener (CSP-safe) */
+        var techBtn = document.getElementById(ciUid + 'Btn');
+        var techDiv = document.getElementById(ciUid);
+        if (techBtn && techDiv) {
+            techBtn.addEventListener('click', function() {
+                var hidden = techDiv.style.display === 'none';
+                techDiv.style.display = hidden ? '' : 'none';
+                techBtn.textContent = hidden ? 'Technische Details ausblenden' : 'Technische Details einblenden';
+            });
+        }
 
         const ticketNums = hotNums.map(function(n) { return n.num; }).sort(function(a, b) { return a - b; });
         renderTicket(ticketNums, zzResults);
@@ -1447,8 +1489,9 @@ html { scrollbar-width: thin; scrollbar-color: var(--interactive) var(--bg); }
         if (lc) {
             var lcd = new Date(lc);
             if (!isNaN(lcd.getTime())) {
+                var cetFmt = lcd.toLocaleString('de-AT', { timeZone: 'Europe/Vienna', hour: '2-digit', minute: '2-digit', hour12: false });
                 var el = document.getElementById('lastCheckTime');
-                if (el) el.textContent = formatTimeCET(lcd) + ' Uhr';
+                if (el) el.textContent = cetFmt + ' Uhr (CET)';
                 var meta = document.getElementById('fetchMeta');
                 if (meta) meta.style.display = '';
             }
